@@ -19,7 +19,7 @@
 #infoBox .text {
     display: table-cell;
     vertical-align: middle;
-    text-align: right;
+    text-align: left;
     width: 50%;
 }
 

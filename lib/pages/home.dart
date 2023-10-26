@@ -15,16 +15,22 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    navigateToDinos();
-
     return Scaffold(
-        appBar: AppBar(
-          title: const Text("My Flutter AR App"),
+      appBar: AppBar(
+        title: const Text("SmartPatrol AR App"),
+      ),
+      body: Center(
+        child: ElevatedButton(
+          child: const Text("Start AR"),
+          onPressed: () {
+            navigateToLocationCheck();
+          },
         ),
-        body: const SizedBox.shrink());
+      ),
+    );
   }
 
-  void navigateToDinos() {
+  void navigateToLocationCheck() {
     debugPrint("Wij gaan naar locatiecheck");
 
     checkDeviceCompatibility().then((value) => {
