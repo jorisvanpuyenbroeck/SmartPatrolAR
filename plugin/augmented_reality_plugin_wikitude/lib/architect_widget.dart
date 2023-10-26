@@ -11,6 +11,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:augmented_reality_plugin_wikitude/wikitude_response.dart';
@@ -24,7 +26,6 @@ typedef void OnWorldLoadFailed(String error);
 
 // ignore: must_be_immutable
 class ArchitectWidget extends StatefulWidget {
-
   final ArchitectWidgetCreatedCallback onArchitectWidgetCreated;
   OnJSONObjectReceived? onJSONObjectReceived;
   OnWorldLoaded? onWorldLoaded;
@@ -35,17 +36,16 @@ class ArchitectWidget extends StatefulWidget {
   List<String> features;
   String licenseKey;
 
-  ArchitectWidget({
-    Key? key,
-    required this.onArchitectWidgetCreated,
-    required this.licenseKey,
-    required this.startupConfiguration,
-    required this.features
-  });
+  ArchitectWidget(
+      {Key? key,
+      required this.onArchitectWidgetCreated,
+      required this.licenseKey,
+      required this.startupConfiguration,
+      required this.features});
 
   @override
-  _ArchitectWidgetState createState() => _architectWidgetState = 
-    new _ArchitectWidgetState(licenseKey, startupConfiguration, features);
+  _ArchitectWidgetState createState() =>
+      _architectWidgetState = new _ArchitectWidgetState(licenseKey, startupConfiguration, features);
 
   Future<void> load(String url, OnWorldLoaded? worldLoaded, OnWorldLoadFailed? worldLoadFailed) async {
     if (worldLoaded != null) onWorldLoaded = worldLoaded;
@@ -64,7 +64,7 @@ class ArchitectWidget extends StatefulWidget {
   Future<void> destroy() async {
     _architectWidgetState?.destroy();
   }
-  
+
   Future<void> setLocation(double lat, double lon, double alt, double accuracy) async {
     _architectWidgetState?.setLocation(lat, lon, alt, accuracy);
   }
@@ -81,10 +81,7 @@ class ArchitectWidget extends StatefulWidget {
   Future<WikitudeResponse> captureScreen(bool mode, String name) async {
     String captureScreenResponse = (await _architectWidgetState?.captureScreen(mode, name))!;
     Map<String, dynamic> captureScreenResponseMap = jsonDecode(captureScreenResponse);
-    return new WikitudeResponse(
-      success: captureScreenResponseMap["success"],
-      message: captureScreenResponseMap["message"]
-    );
+    return new WikitudeResponse(success: captureScreenResponseMap["success"], message: captureScreenResponseMap["message"]);
   }
 
   Future<void> showAlert(String title, String message, [bool requestOpenSettings = false]) async {
@@ -92,7 +89,8 @@ class ArchitectWidget extends StatefulWidget {
   }
 
   Future<bool?> canWebViewGoBack() async {
-    assert(defaultTargetPlatform == TargetPlatform.android, "CanWebViewGoBack() method is not available for $defaultTargetPlatform");
+    assert(defaultTargetPlatform == TargetPlatform.android,
+        "CanWebViewGoBack() method is not available for $defaultTargetPlatform");
     return await _architectWidgetState?.canWebViewGoBack();
   }
 
@@ -116,9 +114,10 @@ class ArchitectWidget extends StatefulWidget {
 class _ArchitectWidgetState extends State<ArchitectWidget> {
   MethodChannel? _channel;
   Map<String, dynamic> configuration = new Map();
+  late AndroidViewController controller;
 
   _ArchitectWidgetState(String licenseKey, StartupConfiguration startConfiguration, List<String> features) {
-    switch(startConfiguration.cameraPosition) {
+    switch (startConfiguration.cameraPosition) {
       case CameraPosition.BACK:
         this.configuration["camera_position"] = "back";
         break;
@@ -133,7 +132,7 @@ class _ArchitectWidgetState extends State<ArchitectWidget> {
         break;
     }
 
-    switch(startConfiguration.cameraResolution) {
+    switch (startConfiguration.cameraResolution) {
       case CameraResolution.SD_640x480:
         this.configuration["camera_resolution"] = "sd_640x480";
         break;
@@ -151,7 +150,7 @@ class _ArchitectWidgetState extends State<ArchitectWidget> {
         break;
     }
 
-    switch(startConfiguration.cameraFocusMode) {
+    switch (startConfiguration.cameraFocusMode) {
       case CameraFocusMode.ONCE:
         this.configuration["camera_focus_mode"] = "once";
         break;
@@ -172,14 +171,47 @@ class _ArchitectWidgetState extends State<ArchitectWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if(defaultTargetPlatform == TargetPlatform.android) {
-      return AndroidView(
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      // return AndroidView(
+      //   viewType: 'architectwidget',
+      //   layoutDirection: TextDirection.ltr,
+      //   onPlatformViewCreated: onPlatformViewCreated,
+      //   creationParams: configuration,
+      //   creationParamsCodec: const StandardMessageCodec(),
+      // );
+
+      return PlatformViewLink(
         viewType: 'architectwidget',
-        onPlatformViewCreated: onPlatformViewCreated,
-        creationParams: configuration,
-        creationParamsCodec: const StandardMessageCodec(),
+        surfaceFactory: (
+          BuildContext context,
+          PlatformViewController controller,
+        ) {
+          return AndroidViewSurface(
+            controller: controller as AndroidViewController,
+            gestureRecognizers: const <Factory<OneSequenceGestureRecognizer>>{},
+            hitTestBehavior: PlatformViewHitTestBehavior.opaque,
+          );
+        },
+        onCreatePlatformView: (PlatformViewCreationParams params) {
+          controller = // @@@@@@@
+              PlatformViewsService.initExpensiveAndroidView(
+            // @@@@@@@
+            id: params.id,
+            viewType: 'architectwidget',
+            layoutDirection: TextDirection.ltr,
+            creationParams: configuration,
+            creationParamsCodec: const StandardMessageCodec(),
+          );
+          controller.addOnPlatformViewCreatedListener(
+            params.onPlatformViewCreated,
+          );
+          controller.addOnPlatformViewCreatedListener(
+            onPlatformViewCreated,
+          );
+          return controller;
+        },
       );
-    } else if(defaultTargetPlatform == TargetPlatform.iOS) {
+    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
       return UiKitView(
         viewType: 'architectwidget',
         onPlatformViewCreated: onPlatformViewCreated,
@@ -192,7 +224,7 @@ class _ArchitectWidgetState extends State<ArchitectWidget> {
   }
 
   Future<void> onPlatformViewCreated(id) async {
-    _channel =  new MethodChannel('architectwidget_$id');
+    _channel = new MethodChannel('architectwidget_$id');
     _channel?.setMethodCallHandler(_handleMethod);
     widget.onArchitectWidgetCreated();
   }
@@ -213,6 +245,7 @@ class _ArchitectWidgetState extends State<ArchitectWidget> {
   }
 
   Future<void> destroy() async {
+    controller.dispose();
     assert(_channel != null);
     return _channel?.invokeMethod('onDestroy');
   }
@@ -239,7 +272,8 @@ class _ArchitectWidgetState extends State<ArchitectWidget> {
 
   Future<String?> showAlert(String title, String message, [bool requestOpenSettings = false]) async {
     assert(_channel != null);
-    return _channel?.invokeMethod('showAlert', {"title": title, "message": message, "requestOpenSettings": requestOpenSettings});
+    return _channel
+        ?.invokeMethod('showAlert', {"title": title, "message": message, "requestOpenSettings": requestOpenSettings});
   }
 
   Future<bool?> canWebViewGoBack() async {
@@ -268,7 +302,7 @@ class _ArchitectWidgetState extends State<ArchitectWidget> {
   }
 
   Future<void> _handleMethod(MethodCall call) async {
-    switch(call.method) {
+    switch (call.method) {
       case "jsonObjectReceived":
         if (widget.onJSONObjectReceived == null) {
           return;
