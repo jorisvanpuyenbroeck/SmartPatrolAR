@@ -6,8 +6,7 @@ class ArMultipleTargetsWidget extends StatefulWidget {
   const ArMultipleTargetsWidget({Key? key}) : super(key: key);
 
   @override
-  State<StatefulWidget> createState() =>
-      _ArMultipleTargetsWidgetState();
+  State<StatefulWidget> createState() => _ArMultipleTargetsWidgetState();
 }
 
 class _ArMultipleTargetsWidgetState extends State<ArMultipleTargetsWidget>
@@ -65,10 +64,8 @@ class _ArMultipleTargetsWidgetState extends State<ArMultipleTargetsWidget>
   }
 
   Future<void> onArchitectWidgetCreated() async {
-    architectWidget.load(
-        "samples/03_MultipleTargets_1_MultipleTargets/index.html",
-        onLoadSuccess,
-        onLoadFailed);
+    architectWidget.load("samples/01_ImageTracking_1_ImageOnTarget/index.html",
+        onLoadSuccess, onLoadFailed);
     architectWidget.resume();
   }
 
